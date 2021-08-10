@@ -1,0 +1,53 @@
+{
+    // 有关 tasks.json 格式的文档，请参见
+    // https://go.microsoft.com/fwlink/?LinkId=733558
+    "version": "2.0.0",
+    "options": {
+        "cwd": "${workspaceFolder}/build"
+    },
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "cmake",
+            "command": "cmake",
+            "args": [
+                ".."
+            ]
+        },
+        {
+            "label": "make",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "command": "mingw32-make.exe",
+            "args": []
+        },
+        {
+            "label": "build",
+            "dependsOn": [
+                "cmake",
+                "make"
+            ]
+        }
+        // {
+        //     "type": "shell",
+        //     "label": "g++.exe build active file",
+        //     "command": "F:\\Vs_Code\\MinGW-set\\bin\\g++.exe",
+        //     "args": [
+        //         "-g",
+        //         "${workspaceFolder}\\Demo_i.cpp",
+        //         "${workspaceFolder}\\Demo_m.cpp",
+        //         "-o",
+        //         "${fileDirname}\\Demo_m.exe",
+        //     ],
+        //     "options": {
+        //         "cwd": "F:\\Vs_Code\\MinGW-set\\bin"
+        //     },
+        //     "problemMatcher": [
+        //         "$gcc"
+        //     ],
+        //     "group": "build"
+        // }
+    ]
+}
