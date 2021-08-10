@@ -4,6 +4,7 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
+                "${workspaceFolder}/include/**"
             ],
             "defines": [
                 "_DEBUG",
@@ -11,10 +12,10 @@
                 "_UNICODE"
             ],
             "windowsSdkVersion": "10.0.18362.0",
-            "compilerPath": "F:/Vs_Code/mingw32/bin/g++.exe",
+            "compilerPath": "F:/Vs_Code/mingw64/bin/g++.exe",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "windows-gcc-x86",
+            "intelliSenseMode": "windows-gcc-x64",
             "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
