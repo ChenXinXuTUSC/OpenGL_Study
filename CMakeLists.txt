@@ -15,5 +15,5 @@ LINK_DIRECTORIES(./lib)
 
 ADD_SUBDIRECTORY(./source)
 
-ADD_EXECUTABLE(OpenGL_test OpenGL_test.cpp)
+ADD_EXECUTABLE(OpenGL_test myHello_Triangle.cpp)
 TARGET_LINK_LIBRARIES(OpenGL_test SUB_LIB glfw3 opengl32)
