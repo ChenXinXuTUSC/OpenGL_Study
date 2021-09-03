@@ -1,0 +1,2 @@
+ADD_EXECUTABLE(myHello_Triangle myHello_Triangle.cpp)
+TARGET_LINK_LIBRARIES(myHello_Triangle myGL)

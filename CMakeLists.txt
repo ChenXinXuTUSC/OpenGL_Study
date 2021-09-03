@@ -12,8 +12,9 @@ INCLUDE_DIRECTORIES(./include/KHR)
 
 
 LINK_DIRECTORIES(./lib)
+SET(GL_LIBRARY
+        glfw3
+        opengl32)
 
 ADD_SUBDIRECTORY(./source)
-
-ADD_EXECUTABLE(myHello_Triangle myHello_Triangle.cpp)
-TARGET_LINK_LIBRARIES(myHello_Triangle SUB_LIB glfw3 opengl32)
+ADD_SUBDIRECTORY(./app)
