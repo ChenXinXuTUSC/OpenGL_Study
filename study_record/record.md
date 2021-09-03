@@ -64,3 +64,16 @@
     ADD_EXECUTABLE(OpenGL_test myHello_Triangle.cpp)
     TARGET_LINK_LIBRARIES(OpenGL_test SUB_LIB glfw3 opengl32)
     ```
+* 2021/09/02:
+    * 今天自己抄一遍教程的代码，发现出来的结果，图形是黑色的，很奇怪，一直在检查代码哪里出了问题，一直在VScode自带的终端想看输出，因为教程中是写了很多错误输出信息的，然而是空的，后面我才想到，我设置了独立控制台输出，在launch.json文件里面。于是，终于找到了问题所在
+    * ![window](屏幕截图%202021-09-02%20165857.png)
+    * 发现是片段着色器中，输出变量没有定义！奇怪，我都是照抄代码的怎么会没有定义？后来仔细一看
+    ```
+    #version 330 core\n
+    "out vec4 FragColor;
+    void main()
+    {
+        Fragcolor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+    };
+    ```
+    * 天哪，FragColor和Fragcolor，有一个c居然有大小写不一样。。。。
