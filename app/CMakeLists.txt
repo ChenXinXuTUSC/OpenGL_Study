@@ -1,2 +1,4 @@
-ADD_EXECUTABLE(myHello_Triangle myHello_Triangle.cpp)
-TARGET_LINK_LIBRARIES(myHello_Triangle myGL)
+SET(TARGET
+        myUniform)
+ADD_EXECUTABLE(${TARGET} ${TARGET}.cpp)
+TARGET_LINK_LIBRARIES(${TARGET} myGL)

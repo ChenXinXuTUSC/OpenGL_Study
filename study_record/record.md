@@ -18,6 +18,7 @@
     * CMake中如果有自己的lib目录，其中有自己的库需要连接，那么在target_link_libraries()之前，需要先使用link_directory告知CMake你的lib目录
     * learnOpenGL-CN 你好，窗口：
     * ![window](屏幕截图%202021-08-10%20152431.png)
+___
 * 2021/08/31:
     * 今天了解了OpenGL大致的绘图流程，整个绘图之前的准备感觉很像软件工程设计模式中的工厂模式和单例模式。
     * VAO，VBO，EBO是指当前生成的对象的ID，通过对象ID来使用这些对象。
@@ -64,6 +65,7 @@
     ADD_EXECUTABLE(OpenGL_test myHello_Triangle.cpp)
     TARGET_LINK_LIBRARIES(OpenGL_test SUB_LIB glfw3 opengl32)
     ```
+___
 * 2021/09/02:
     * 今天自己抄一遍教程的代码，发现出来的结果，图形是黑色的，很奇怪，一直在检查代码哪里出了问题，一直在VScode自带的终端想看输出，因为教程中是写了很多错误输出信息的，然而是空的，后面我才想到，我设置了独立控制台输出，在launch.json文件里面。于是，终于找到了问题所在
     * ![window](屏幕截图%202021-09-02%20165857.png)
@@ -77,3 +79,10 @@
     };
     ```
     * 天哪，FragColor和Fragcolor，有一个c居然有大小写不一样。。。。
+___
+* 2021/09/07:
+    * 今天碰到的一些注意事项(坑)有：
+        * 顶点着色器和片段着色器之间的输入输出通信一定记得看清楚格式是vec3还是vec4，需不需要转换
+        * 渲染循环中，每次渲染前需要指定使用哪一个着色器glUseProgram(shaderProgramID)
+    * 为什么指定三个顶点的颜色就可以在其他地方进行线性插值？(如图)
+    * ![window](屏幕截图%202021-09-07%20112516.png)
