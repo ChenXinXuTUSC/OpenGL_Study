@@ -86,3 +86,37 @@ ___
         * 渲染循环中，每次渲染前需要指定使用哪一个着色器glUseProgram(shaderProgramID)
     * 为什么指定三个顶点的颜色就可以在其他地方进行线性插值？(如图)
     * ![window](屏幕截图%202021-09-07%20112516.png)
+___
+* 2021/09/09:
+    * 今天学习纹理贴图遇到的一些坑：
+        * 首先，以后复制粘贴必须看清楚函数的调用参数
+        ```
+        data = stbi_load(std::string("../images/Flower.jpg").c_str(), &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+        ```
+        看清楚了！加载jpg的时候glTexImage2D绑定纹理对象时，使用RGB，就是说加载jpg与png时，绑定纹理这个函数的参数不同的地方在第三个参数，对于jpg这种没有透明通道的图像使用GL_RGB来解释字节，加载png时，使用GL_RGBA来解释
+        * 今天将代码复制过来后，由于需要更改使用自己的图像，于是将源代码中对jpg和png的纹理绑定函数使用剪切粘贴进行了位置对调，然而对调之后没有发现，原来图像文件字节的解释也需要对应改变。
+        * 如果不对glTexImage2D的第三个参数和第七个参数作对应变更，那么OpenGL会绘制白屏。
+        ```
+        data = stbi_load(std::string("../images/awesomeface.png").c_str(), &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+        ```
+        * ![windows](屏幕截图%202021-09-09%20002342.png)
+___
+* 2021/09/09:
+    * 这可真是不得了，计算机是如何计算出这些深度缓存，片面贴图最后显示在屏幕上的呢，要我说，OpenGL能显示3D场景下的效果最大功劳应该是他的插值采样，这样，就算原本是正方形平面的贴图纹理，在插值采样之后映射到三角形片面上可以成为各种形状(类似于单应矩阵)，而不同比例形状的贴图正是我们日常生活中不同视角看物体的效果。
+    * ![windows](屏幕截图%202021-09-09%20154202.png)
+    * 还有一个非常重要的地方就是三个变换矩阵，目前弄明白了模型变换矩阵，就是将模型自身的坐标变换到世界坐标系下，这样你就可以在你的世界摆放它们了。
+    * 本章教程的视口变换不是很明晰，是一个非常简单的摄像机向后移动的效果，由于我们摄像机看向的是-z方向，因此，摄像机向后移动，看到的东西实际上就是向-z方向移动，因此viewing transform也很简单，这章教程中，我们假定摄像机无法被操控，只能朝着-z方向看，因此视口变换也就没有多复杂了。
+    * 最复杂的是投影变换，因为我们要实现透视效果，必须使用体型梯形视口区域viewing box(超过这个视口范围的坐标都会被裁剪掉)，具体的数学原理还在研究，但原文是英文文章，不太好读，只能先硬啃了。
+    * http://www.songho.ca/opengl/gl_projectionmatrix.html
