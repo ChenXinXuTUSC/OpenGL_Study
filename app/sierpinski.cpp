@@ -30,7 +30,7 @@ bool firstMove = true;
 // shader
 
 // draw functions
-const int MAX_LEVEL = 2;
+const int MAX_LEVEL = 3;
 void divideTriangle(Shader* shader, const glm::vec3& p1, const float len, int level);
 
 int main(int argc, char **argv)
@@ -223,13 +223,16 @@ void scrol_callback(GLFWwindow *window, double currX, double currY)
     ourCamera.ProcessMouseScroll(currY);
 }
 
-void divideTriangle(Shader* shader, const glm::vec3 &p1, const float len, int level)
+void divideTriangle(Shader* shader, const glm::vec3& p1, const float len, int level)
 {
     if (level == MAX_LEVEL)
     {
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::scale(model, glm::vec3(1.0f / float(MAX_LEVEL), 1.0f / float(MAX_LEVEL), 1.0f / float(MAX_LEVEL)));
         model = glm::translate(model, p1 - glm::vec3(0.0f, 0.5f, 0.0f));
+        model = glm::scale(model,
+                           glm::vec3(1.0f / float(1 << (MAX_LEVEL - 1)),
+                                     1.0f / float(1 << (MAX_LEVEL - 1)),
+                                     1.0f / float(1 << (MAX_LEVEL - 1))));
         shader->setMat4("model", model);
         glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
         return;
@@ -238,26 +241,25 @@ void divideTriangle(Shader* shader, const glm::vec3 &p1, const float len, int le
         shader,
         p1,
         len / 2.0f,
-        level + 1
-        );
+        level + 1);
     divideTriangle(
         shader,
-        p1 + glm::vec3(len / 2.0f, -len, len / 2.0f),
+        p1 + glm::vec3(len / 4.0f, -len / 2.0f, len / 4.0f),
         len / 2.0f,
         level + 1);
     divideTriangle(
         shader,
-        p1 + glm::vec3(len / 2.0f, -len, -len / 2.0f),
+        p1 + glm::vec3(len / 4.0f, -len / 2.0f, -len / 4.0f),
         len / 2.0f,
         level + 1);
     divideTriangle(
         shader,
-        p1 + glm::vec3(-len / 2.0f, -len, len / 2.0f),
+        p1 + glm::vec3(-len / 4.0f, -len / 2.0f, len / 4.0f),
         len / 2.0f,
         level + 1);
     divideTriangle(
         shader,
-        p1 + glm::vec3(-len / 2.0f, -len, -len / 2.0f),
+        p1 + glm::vec3(-len / 4.0f, -len / 2.0f, -len / 4.0f),
         len / 2.0f,
         level + 1);
 }
