@@ -1,4 +1,4 @@
 SET(TARGET
-        coordinate)
+        sierpinski)
 ADD_EXECUTABLE(${TARGET} ${TARGET}.cpp)
 TARGET_LINK_LIBRARIES(${TARGET} myGL)
