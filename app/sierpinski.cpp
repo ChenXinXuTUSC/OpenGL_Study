@@ -1,6 +1,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <vector>
+#include <math.h>
 #include "shader.h"
 #include "camera.h"
 
@@ -13,9 +14,6 @@ void scrol_callback(GLFWwindow *window, double currX, double currY);
 // global settings
 const unsigned int SCR_WIDTH = 600;
 const unsigned int SCR_HEIGH = 600;
-const unsigned int SEGMENT_X = 10;
-const unsigned int SEGMENT_Y = 10;
-float fov = 45.0f;
 // delta time
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -72,31 +70,28 @@ int main(int argc, char **argv)
 
     // compute sphere vertices
     float vertices[] =
-    {// coordinate          // color
-        0.0f, 0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
-        0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f,
-        0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
-        -0.5f, -0.5f, 0.5f, 1.0f, 1.0f, 0.0f
+    {
+        // coordinate                                           // color
+        0.000000f, std::sqrt(2.0f / 3.0f), 0.000000f,           1.0f, 0.0f, 0.0f,
+        0.000000f, 0.000000f, -1.0f / std::sqrt(3.0f),          0.0f, 1.0f, 0.0f,
+        -0.500000f, 0.000000f, 1.0f / (2.0f * std::sqrt(3.0f)), 0.0f, 0.0f, 1.0f,
+        0.500000f, 0.000000f,  1.0f / (2.0f * std::sqrt(3.0f)), 1.0f, 1.0f, 0.0f
     };
     // compute sphere indices
     unsigned int indices[] = 
     {
         0, 1, 2,
+        0, 1, 3,
         0, 2, 3,
-        0, 3, 4,
-        0, 4, 1,
-        1, 2, 3,
-        1, 3, 4
+        1, 2, 3
     };
     // glm::vec3 tpye vertices
     glm::vec3 trianglePoses[] =
-    { 
-        glm::vec3(0.0f, 0.5f, 0.0f),
-        glm::vec3(0.5f, -0.5f, 0.5f),
-        glm::vec3(0.5f, -0.5f, -0.5f),
-        glm::vec3(-0.5f, -0.5f, -0.5f),
-        glm::vec3(-0.5f, -0.5f, 0.5f)
+    {
+        glm::vec3(0.000000f, std::sqrt(2.0f / 3.0f), 0.000000f),
+        glm::vec3(0.000000f, 0.000000f, -1.0f / std::sqrt(3.0f)),
+        glm::vec3(-0.500000f, 0.000000f, 1.0f / (2.0f * std::sqrt(3.0f))),
+        glm::vec3(0.500000f, 0.000000f, 1.0f / (2.0f * std::sqrt(3.0f))),
     };
 
     // 开始分配缓存对象
@@ -228,13 +223,13 @@ void divideTriangle(Shader* shader, const glm::vec3& p1, const float len, int le
     if (level == MAX_LEVEL)
     {
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, p1 - glm::vec3(0.0f, 0.5f, 0.0f));
+        model = glm::translate(model, p1 - glm::vec3(0.0f, std::sqrt(2.0f / 3.0f), 0.0f));
         model = glm::scale(model,
                            glm::vec3(1.0f / float(1 << (MAX_LEVEL - 1)),
                                      1.0f / float(1 << (MAX_LEVEL - 1)),
                                      1.0f / float(1 << (MAX_LEVEL - 1))));
         shader->setMat4("model", model);
-        glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
         return;
     }
     divideTriangle(
@@ -244,22 +239,22 @@ void divideTriangle(Shader* shader, const glm::vec3& p1, const float len, int le
         level + 1);
     divideTriangle(
         shader,
-        p1 + glm::vec3(len / 4.0f, -len / 2.0f, len / 4.0f),
+        p1 + glm::vec3(0.0f, -len * std::sqrt(2.0f / 3.0f) / 2.0f, -len / (2.0f * std::sqrt(3.0f))),
         len / 2.0f,
         level + 1);
     divideTriangle(
         shader,
-        p1 + glm::vec3(len / 4.0f, -len / 2.0f, -len / 4.0f),
+        p1 + glm::vec3(-len / 4.0f, -len * std::sqrt(2.0f / 3.0f) / 2.0f, len / (4.0f * std::sqrt(3.0f))),
         len / 2.0f,
         level + 1);
     divideTriangle(
         shader,
-        p1 + glm::vec3(-len / 4.0f, -len / 2.0f, len / 4.0f),
+        p1 + glm::vec3(len / 4.0f, -len * std::sqrt(2.0f / 3.0f) / 2.0f, len / (4.0f * std::sqrt(3.0f))),
         len / 2.0f,
         level + 1);
-    divideTriangle(
-        shader,
-        p1 + glm::vec3(-len / 4.0f, -len / 2.0f, -len / 4.0f),
-        len / 2.0f,
-        level + 1);
+    // divideTriangle(
+    //     shader,
+    //     p1 + glm::vec3(-len / 4.0f, -len / 2.0f, -len / 4.0f),
+    //     len / 2.0f,
+    //     level + 1);
 }
