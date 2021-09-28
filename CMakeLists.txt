@@ -9,12 +9,14 @@ INCLUDE_DIRECTORIES(./include)
 INCLUDE_DIRECTORIES(./include/GLFW)
 INCLUDE_DIRECTORIES(./include/glad)
 INCLUDE_DIRECTORIES(./include/KHR)
+INCLUDE_DIRECTORIES(./include/assimp)
 
 
 LINK_DIRECTORIES(./lib)
 SET(GL_LIBRARY
         glfw3
-        opengl32)
+        opengl32
+        assimp-vc142-mtd)
 
 ADD_SUBDIRECTORY(./source)
 ADD_SUBDIRECTORY(./app)
