@@ -77,10 +77,15 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glEnable(GL_STENCIL_TEST);
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
     // build and compile our shader zprogram
     // ------------------------------------
     Shader cubeShader("../source/shader/vmodel.glsl", "../source/shader/fmodel.glsl");
+    Shader boadershader("../source/shader/vstencil.glsl", "../source/shader/fstencil.glsl");
 
     Mesh ourCube("../model/cube/cube.obj");
     ourCube.addTexture("../images/container2.png", Texture::TEXType::DIFF);
@@ -88,10 +93,6 @@ int main()
 
     Mesh ourGround("../model/ground/ground.obj");
     ourGround.addTexture("../images/marble.png", Texture::TEXType::DIFF);
-
-    Mesh ourDoll("../model/doll/doll.obj");
-    ourDoll.addTexture("../images/container2.png", Texture::TEXType::DIFF);
-    ourDoll.addTexture("../images/container2_specular.png", Texture::TEXType::SPEC);
 
     // render loop
     // -----------
@@ -110,7 +111,7 @@ int main()
         // render
         // ------
         glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         // be sure to activate shader when setting uniforms/drawing objects
         cubeShader.use();
@@ -128,25 +129,53 @@ int main()
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
+        // world transformation
+        glm::mat4 model = glm::mat4(1.0f);
+
+        cubeShader.setMat4("model", model);
         cubeShader.setMat4("projection", projection);
         cubeShader.setMat4("view", view);
 
-        // world transformation
-        glm::mat4 model = glm::mat4(1.0f);
-        cubeShader.setMat4("model", model);
+        boadershader.use();
+        boadershader.setMat4("model", model);
+        boadershader.setMat4("projection", projection);
+        boadershader.setMat4("view", view);
 
+
+        // -----------------------------------------------------------------------
         // draw all the models
-        ourCube.Draw(cubeShader);
-
+        // do not influence the stencil of the window
+        cubeShader.use();
+        glStencilMask(0x00);
         model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
         cubeShader.setMat4("model", model);
         ourGround.Draw(cubeShader);
 
-        // draw a second one
-        // model = glm::translate(model, glm::vec3(3.0f, 0.0f, 3.0f));
-        // cubeShader.setMat4("model", model);
+        // influence the stencil of the window
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF);
+        model = glm::mat4(1.0f);
+        cubeShader.setMat4("model", model);
+        ourCube.Draw(cubeShader);
 
-        // ourDoll.Draw(cubeShader);
+        /**
+         * @brief draw the boarder and remove the area
+         * that covers the original model.
+         */
+        boadershader.use();
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+        glStencilMask(0x00);
+        glDisable(GL_DEPTH_TEST);
+
+        float scale_rate = 1.05f;
+        model = glm::scale(model, glm::vec3(scale_rate, scale_rate, scale_rate));
+        boadershader.setMat4("model", model);
+        ourCube.Draw(boadershader);
+
+        // return to original state
+        glStencilMask(0xFF);
+        glStencilFunc(GL_ALWAYS, 0, 0xFF);
+        glEnable(GL_DEPTH_TEST);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
