@@ -3,6 +3,7 @@
 #include <vector>
 #include "shader.h"
 #include "camera.h"
+#include <myMesh.h>
 
 // call back functions
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
