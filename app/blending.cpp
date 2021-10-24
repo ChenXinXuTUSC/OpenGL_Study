@@ -8,9 +8,14 @@
 
 #include <shader.h>
 #include <camera.h>
+#include <myMesh.h>
 
 #include <iostream>
+#include <vector>
+#include <random>
+#include <ctime>
 #include <string>
+#include <map>
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
@@ -19,7 +24,7 @@ void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
 
 // settings
-const unsigned int SCR_WIDTH  = 600;
+const unsigned int SCR_WIDTH = 600;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
@@ -33,7 +38,7 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 // lighting
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+glm::vec3 lightPos(1.8f, 2.0f, 3.0f);
 
 int main()
 {
@@ -76,100 +81,62 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // build and compile our shader zprogram
     // ------------------------------------
-    Shader cubeShader("../source/shader/vmaterial.glsl", "../source/shader/fmaterial.glsl");
-    Shader lampShader("../source/shader/vlamp.glsl", "../source/shader/flamp.glsl");
+    Shader modelShader("../source/shader/vmodel.glsl", "../source/shader/fmodel.glsl");
+    // blending shader is especially used for png mapping, do not add a jpg mapping to it.
+    Shader blendShader("../source/shader/vblending.glsl", "../source/shader/fblending.glsl");
 
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    float vertices[] = {
-        // positions          // normals           // texture coords
-        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
-        0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
-        0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
-        0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
-        -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+    Mesh ourCube("../model/cube/cube.obj");
+    ourCube.addMapping("../images/container2.png", Texture::TEXType::DIFF);
+    ourCube.addMapping("../images/container2_specular.png", Texture::TEXType::SPEC);
 
-        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-        0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-        0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-        0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-        -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
-        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+    Mesh ourGround("../model/ground/ground.obj");
+    ourGround.addMapping("../images/marble.png", Texture::TEXType::SPEC);
 
-        -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-        -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-        -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+    Mesh grass("../model/vertical_plane/vertical_plane.obj");
+    grass.addMapping("../images/grass.png", Texture::TEXType::DIFF);
 
-        0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-        0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-        0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-        0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-        0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+    Mesh myWindow("../model/vertical_plane/vertical_plane.obj");
+    myWindow.addMapping("../images/blending_transparent_window.png", Texture::TEXType::SPEC);
+    /**
+     * @brief you have to carefully sort the sequnce of rendering
+     * of these transparent object. Due to the problem by the Ope
+     * nGL DEPTH_TEST, a transparent object that should allow the
+     * passage of the color of further objects, in fact will cover.
+     */
+    std::srand(unsigned(std::time(0)));
+    std::map<float, glm::vec3> sortedTransparent;
+    std::vector<glm::vec3> winPoses;
+    for (int i = 0; i < 5; ++i)
+    {
+        winPoses.push_back(
+            (std::rand() % 2 ? 1.0f : -1.0f) * 
+            glm::vec3(float(3 + std::rand() % 7), 0.0f, float(std::rand() % 5)));
+    }
 
-        -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
-        0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f,
-        0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-        0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-        -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
-
-        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-        0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-        0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-        0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-        -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
-    // first, configure the cube's VAO (and VBO)
-    unsigned int cubeVAO;
-    glGenVertexArrays(1, &cubeVAO);
-    glBindVertexArray(cubeVAO);
-
-    unsigned int VBO;
-    glGenBuffers(1, &VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-    // second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
-    unsigned int lightCubeVAO;
-    glGenVertexArrays(1, &lightCubeVAO);
-    glBindVertexArray(lightCubeVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // note that we update the lamp's position attribute's stride to reflect the updated buffer data
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(0);
-
-    // load textures (we now use a utility function to keep the code more organized)
-    // -----------------------------------------------------------------------------
-    unsigned int diffuseMap = loadTexture(std::string("../images/container2.png").c_str());
-    unsigned int speculeMap = loadTexture(std::string("../images/container2_specular.png").c_str());
-    // shader configuration
-    // --------------------
-    cubeShader.use();
-    cubeShader.setInt("material.diffuse", 0);
-    cubeShader.setInt("material.specular", 1);
 
     // render loop
     // -----------
+    // shader settings
+    modelShader.use();
+    modelShader.setFloat("material.shininess", 32.0f);
+    modelShader.setVec3("light.ambient", 0.3f, 0.3f, 0.3f);
+    modelShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+    modelShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+
+    blendShader.use();
+    blendShader.setFloat("material.shininess", 32.0f);
+    blendShader.setVec3("light.ambient", 0.3f, 0.3f, 0.3f);
+    blendShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+    blendShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+
     while (!glfwWindowShouldClose(window))
     {
         // per-frame time logic
-        // --------------------
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
@@ -180,65 +147,74 @@ int main()
 
         // render
         // ------
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // be sure to activate shader when setting uniforms/drawing objects
-        cubeShader.use();
-        cubeShader.setVec3("light.position", lightPos);
-        cubeShader.setVec3("viewPos", camera.Position);
+        // ----------modelShader----------
+        modelShader.use();
+        modelShader.setVec3("light.position", lightPos);
+        modelShader.setVec3("viewPos", camera.Position);
 
-        // light properties
-        cubeShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-        cubeShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-        cubeShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-
-        // material properties
-        cubeShader.setFloat("material.shininess", 64.0f);
+        blendShader.use();
+        blendShader.setVec3("light.position", lightPos);
+        blendShader.setVec3("viewPos", camera.Position);
 
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
-        cubeShader.setMat4("projection", projection);
-        cubeShader.setMat4("view", view);
-
-        // world transformation
         glm::mat4 model = glm::mat4(1.0f);
-        cubeShader.setMat4("model", model);
 
-        // bind diffuse map
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, diffuseMap);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, speculeMap);
+        modelShader.use();
+        modelShader.setMat4("projection", projection);
+        modelShader.setMat4("view", view);
+        modelShader.setMat4("model", model);
 
-        // render the cube
-        glBindVertexArray(cubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        blendShader.use();
+        blendShader.setMat4("projection", projection);
+        blendShader.setMat4("view", view);
+        blendShader.setMat4("model", model);
 
-        // also draw the lamp object
-        lampShader.use();
-        lampShader.setMat4("projection", projection);
-        lampShader.setMat4("view", view);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, lightPos);
-        model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
-        lampShader.setMat4("model", model);
+        // draw the cube
+        modelShader.use();
+        ourCube.Draw(modelShader);
+        // draw a second one
+        model = glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 3.0f));
+        model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelShader.setMat4("model", model);
+        ourCube.Draw(modelShader);
 
-        glBindVertexArray(lightCubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(5.f, 1.0f, 5.0f));
+        modelShader.setMat4("model", model);
+        ourGround.Draw(modelShader);
+
+        // draw the grass and window
+        blendShader.use();
+        model = glm::translate(glm::mat4(1.0f), glm::vec3(-3.0f, 1.5f, -3.0f));
+        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        blendShader.setMat4("model", model);
+        grass.Draw(blendShader);
+
+        sortedTransparent.clear();
+        for (unsigned int i = 0; i < 5; ++i)
+        {
+            float dist = glm::length(camera.Position - winPoses[i]);
+            sortedTransparent[dist] = winPoses[i];
+        }
+        for (std::map<float, glm::vec3>::reverse_iterator iter = sortedTransparent.rbegin(); 
+                iter != sortedTransparent.rend(); ++iter)
+        {
+            model = glm::translate(glm::mat4(1.0f), iter->second);
+            blendShader.setMat4("model", model);
+            myWindow.Draw(blendShader);
+        }
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
-    // optional: de-allocate all resources once they've outlived their purpose:
-    // ------------------------------------------------------------------------
-    glDeleteVertexArrays(1, &cubeVAO);
-    glDeleteVertexArrays(1, &lightCubeVAO);
-    glDeleteBuffers(1, &VBO);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------

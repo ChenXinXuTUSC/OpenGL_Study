@@ -34,7 +34,7 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 // lighting
-glm::vec3 lightPos(9.0f, 10.0f, 15.0f);
+glm::vec3 lightPos(1.8f, 2.0f, 3.0f);
 
 int main()
 {
@@ -136,17 +136,17 @@ int main()
         cubeShader.setMat4("model", model);
 
         // draw all the models
-        ourCube.Draw(cubeShader);
+        // ourCube.Draw(cubeShader);
 
         model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
         cubeShader.setMat4("model", model);
         ourGround.Draw(cubeShader);
 
+        ourDoll.Draw(cubeShader);
         // draw a second one
         // model = glm::translate(model, glm::vec3(3.0f, 0.0f, 3.0f));
         // cubeShader.setMat4("model", model);
 
-        // ourDoll.Draw(cubeShader);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------

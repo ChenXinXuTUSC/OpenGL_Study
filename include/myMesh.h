@@ -109,7 +109,7 @@ private:
 
         glBindVertexArray(0);
     }
-    unsigned int loadTexture(char const *path)
+    unsigned int loadMapping(char const *path)
     {
         unsigned int textureID;
         glGenTextures(1, &textureID);
@@ -130,8 +130,8 @@ private:
             glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
             glGenerateMipmap(GL_TEXTURE_2D);
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -281,7 +281,7 @@ public:
         setupMesh();
     }
     
-    void addTexture(string texPath, Texture::TEXType texType)
+    void addMapping(string texPath, Texture::TEXType texType)
     {
         Texture newTex;
         for (Texture& t : textures)
@@ -295,7 +295,7 @@ public:
                 return;
             }
         }
-        newTex.id = loadTexture(texPath.c_str());
+        newTex.id = loadMapping(texPath.c_str());
         newTex.type = texType;
         newTex.path = texPath;
         textures.push_back(newTex);
@@ -303,11 +303,6 @@ public:
 
     void Draw(Shader& shader)
     {
-        if (!textures.size())
-        {
-            cout << "this demo require texture(s).\n";
-            return;
-        }
         // bind appropriate textures
         unsigned int diffuseNr = 1;
         unsigned int specularNr = 1;
@@ -326,7 +321,7 @@ public:
             else if (textures[i].type == Texture::TEXType::SPEC)
             {
                 number = std::to_string(specularNr++);
-                name = "material.texture_specualr";
+                name = "material.texture_specular";
             }
             // now set the sampler to the correct texture unit
             glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
@@ -337,6 +332,7 @@ public:
         // draw mesh
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+        
         glBindVertexArray(0);
 
         // always good practice to set everything back to defaults once configured.
