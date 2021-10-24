@@ -39,7 +39,7 @@ struct Vertex
 
 struct Texture
 {
-    enum TEXType{DIFF, SPEC};
+    enum TEXType{DIFF, SPEC, EVRM, RFLC};
     unsigned int id;
     TEXType type;
     string path;
@@ -79,6 +79,9 @@ private:
     unsigned int VBO;
     unsigned int EBO;
 
+    bool useEvrmTex;
+    bool useRflcTex;
+
     void setupMesh()
     {
         glGenVertexArrays(1, &VAO);
@@ -109,7 +112,8 @@ private:
 
         glBindVertexArray(0);
     }
-    unsigned int loadMapping(char const *path)
+    
+    unsigned int loadMapping(const char* path)
     {
         unsigned int textureID;
         glGenTextures(1, &textureID);
@@ -145,6 +149,45 @@ private:
 
         return textureID;
     }
+    unsigned int loadCubeMap(const std::vector<string>& faces)
+    {
+        unsigned int textureID;
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+        int width, height, nrComponents;
+        for (unsigned int i = 0; i < faces.size(); i++)
+        {
+            unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrComponents, 0);
+            if (data)
+            {
+                GLenum format;
+                if (nrComponents == 1)
+                    format = GL_RED;
+                else if (nrComponents == 3)
+                    format = GL_RGB;
+                else if (nrComponents == 4)
+                    format = GL_RGBA;
+                
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                             0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+                stbi_image_free(data);
+            }
+            else
+            {
+                std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
+                stbi_image_free(data);
+            }
+        }
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+        return textureID;
+    }
+    
     vector<string> stringSplit(const string &s, const char c)
     {
         int l = 0, r = 0;
@@ -279,6 +322,9 @@ public:
     {
         loadObjFile(path);
         setupMesh();
+
+        useEvrmTex = false;
+        useRflcTex = false;
     }
     
     void addMapping(string texPath, Texture::TEXType texType)
@@ -300,9 +346,43 @@ public:
         newTex.path = texPath;
         textures.push_back(newTex);
     }
+    void addCubeMap(const std::vector<string> faces, Texture::TEXType texType)
+    {
+        if (texType == Texture::TEXType::EVRM)
+            useEvrmTex = true;
+        if (texType == Texture::TEXType::RFLC)
+            useRflcTex = true;
 
+        Texture newTex;
+        newTex.id = loadCubeMap(faces);
+        textures.push_back(newTex);
+    }
     void Draw(Shader& shader)
     {
+        if (useEvrmTex)
+        {
+            glDepthFunc(GL_LEQUAL);
+            glBindVertexArray(VAO);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, textures[0].id);
+
+            glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+
+            glBindVertexArray(0);
+            glDepthFunc(GL_LESS); // set depth function back to default
+
+            return;
+        }
+        if (useRflcTex)
+        {
+            glBindVertexArray(VAO);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, textures[0].id);
+            glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+            glBindVertexArray(0);
+            return;
+        }
         // bind appropriate textures
         unsigned int diffuseNr = 1;
         unsigned int specularNr = 1;
