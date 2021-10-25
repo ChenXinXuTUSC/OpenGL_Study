@@ -20,7 +20,7 @@ void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
 
 // settings
-const unsigned int SCR_WIDTH =600;
+const unsigned int SCR_WIDTH = 600;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
@@ -35,6 +35,8 @@ float lastFrame = 0.0f;
 
 // lighting
 glm::vec3 lightPos(1.8f, 1.0f, 3.0f);
+bool blinn = false;
+bool blinnKeyPressed = false;
 
 int main()
 {
@@ -81,7 +83,7 @@ int main()
 
     // build and compile our shader zprogram
     // ------------------------------------
-    Shader modelShader("../source/shader/vmodel.glsl", "../source/shader/fmodel.glsl");
+    Shader blinnShader("../source/shader/vmodel.glsl", "../source/shader/fblinn.glsl");
     Shader textureShader("../source/shader/vtexture.glsl", "../source/shader/ftexture.glsl");
 
     Mesh ourCube("../model/cube/cube.obj");
@@ -96,20 +98,26 @@ int main()
     // render loop
     // -----------
     // shader settings
-    modelShader.use();
-    modelShader.setFloat("material.shininess", 1.0f);
-    modelShader.setVec3("light.ambient", 0.3f, 0.3f, 0.3f);
-    modelShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-    modelShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+    blinnShader.use();
+    blinnShader.setFloat("material.shininess", 32.0f);
+    blinnShader.setVec3("light.ambient", 0.3f, 0.3f, 0.3f);
+    blinnShader.setVec3("light.diffuse", 0.6f, 0.6f, 0.6f);
+    blinnShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+    blinnShader.setFloat("light.constant", 1.0f);
+    blinnShader.setFloat("light.linear", 0.09f);
+    blinnShader.setFloat("light.quadratic", 0.032f);
 
     textureShader.use();
-    textureShader.setFloat("material.shininess", 1.0f);
+    textureShader.setFloat("material.shininess", 32.0f);
     textureShader.setVec3("material.ambient", 0.5f, 0.475f, 0.0f);
     textureShader.setVec3("material.diffuse", 1.0f, 0.95f, 0.0f);
     textureShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
     textureShader.setVec3("light.ambient", 0.3f, 0.3f, 0.3f);
-    textureShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+    textureShader.setVec3("light.diffuse", 0.6f, 0.6f, 0.6f);
     textureShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+    textureShader.setFloat("light.constant", 1.0f);
+    textureShader.setFloat("light.linear", 0.09f);
+    textureShader.setFloat("light.quadratic", 0.032f);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -128,54 +136,52 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // be sure to activate shader when setting uniforms/drawing objects
-        // ----------modelShader----------
-        modelShader.use();
-        modelShader.setVec3("light.position", lightPos);
-        modelShader.setVec3("viewPos", camera.Position);
+        // ----------blinnShader----------
+        blinnShader.use();
+        blinnShader.setVec3("light.position", lightPos);
+        blinnShader.setVec3("viewPos", camera.Position);
+        blinnShader.setInt("blinn", blinn);
 
         // ----------textureShader----------
         textureShader.use();
         textureShader.setVec3("light.position", lightPos);
         textureShader.setVec3("viewPos", camera.Position);
 
-
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
-        modelShader.use();
-        modelShader.setMat4("projection", projection);
-        modelShader.setMat4("view", view);
+        blinnShader.use();
+        blinnShader.setMat4("projection", projection);
+        blinnShader.setMat4("view", view);
         textureShader.use();
         textureShader.setMat4("projection", projection);
         textureShader.setMat4("view", view);
 
         // world transformation
         glm::mat4 model = glm::mat4(1.0f);
-        modelShader.use();
-        modelShader.setMat4("model", model);
+        blinnShader.use();
+        blinnShader.setMat4("model", model);
         textureShader.use();
         textureShader.setMat4("model", model);
 
         // draw all the models
         glEnable(GL_CULL_FACE);
-        // modelShader.use();
-        // ourCube.Draw(modelShader);
-        
+        // blinnShader.use();
+        // ourCube.Draw(blinnShader);
+
         textureShader.use();
         ourRing.Draw(textureShader);
 
         glDisable(GL_CULL_FACE);
-        modelShader.use();
+        blinnShader.use();
         model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(5.0f, 1.0f, 5.0f));
-        modelShader.setMat4("model", model);
-        ourGround.Draw(modelShader);
-
-
+        model = glm::scale(model, glm::vec3(2.5f, 1.0f, 2.5f));
+        blinnShader.setMat4("model", model);
+        ourGround.Draw(blinnShader);
 
         // draw a second one
         // model = glm::translate(model, glm::vec3(3.0f, 0.0f, 3.0f));
-        // modelShader.setMat4("model", model);
+        // blinnShader.setMat4("model", model);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -204,6 +210,13 @@ void processInput(GLFWwindow *window)
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed)
+    {
+        blinn = !blinn;
+        blinnKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE)
+        blinnKeyPressed = false;
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes

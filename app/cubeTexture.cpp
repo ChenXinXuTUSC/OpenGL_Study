@@ -34,7 +34,7 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 // lighting
-glm::vec3 lightPos(1.8f, 2.0f, 3.0f);
+glm::vec3 lightPos(-1.8f, 4.0f, -3.0f);
 
 int main()
 {
@@ -101,7 +101,7 @@ int main()
         "../images/skybox/back.jpg",
     };
     
-    Mesh ourRflc("../model/sphere/sphere.obj");
+    Mesh ourRflc("../model/doll/doll.obj");
     ourRflc.addCubeMap(faces, Texture::TEXType::RFLC);
 
     Mesh ourGround("../model/ground/ground.obj");
