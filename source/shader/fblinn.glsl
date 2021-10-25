@@ -28,6 +28,7 @@ struct Light {
 uniform vec3 viewPos;
 uniform Material material;
 uniform Light light;
+uniform bool blinn;
 
 void main()
 {
@@ -42,8 +43,17 @@ void main()
     
     // specular
     vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);  
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    float spec = 0.0;
+    if (blinn)
+    {
+        vec3 halfwayDir = normalize(lightDir + viewDir);
+        spec = pow(max(dot(norm, halfwayDir), 0.0), material.shininess);
+    }
+    else
+    {
+        vec3 reflectDir = reflect(-lightDir, norm);  
+        spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    }
     vec3 specular = light.specular * spec * vec3(texture(material.texture_specular1, TexCoords).rgb); 
 
     // attenuation(衰减)
