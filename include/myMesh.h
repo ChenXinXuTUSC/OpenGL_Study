@@ -75,6 +75,15 @@ private:
         int nrm_idx;
         fce(int v = 0, int t = 0, int n = 0) : vtx_idx(v), tex_idx(t), nrm_idx(n) {}
     };
+    struct mtl
+    {
+        glm::vec3 ka; // 环境光分量
+        glm::vec3 kd; // 漫反射分量
+        glm::vec3 ks; // 镜面光分量
+        float ns; // 反射强度
+    };
+    
+    mtl meshMaterial;
 
     unsigned int VBO;
     unsigned int EBO;
@@ -317,6 +326,8 @@ public:
 
     unsigned int VAO;
 
+    string partName;
+
     // constructor
     Mesh(const string& path)
     {
@@ -327,6 +338,18 @@ public:
         useRflcTex = false;
     }
     
+    void setVertice(const vector<Vertex>& v)
+    {
+        vertices = v;
+    }
+    void setMateria(glm::vec3 a, glm::vec3 d, glm::vec3 s, float n)
+    {
+        meshMaterial.ka = a;
+        meshMaterial.kd = d;
+        meshMaterial.ks = s;
+        meshMaterial.ns = n;
+    }
+
     void addMapping(string texPath, Texture::TEXType texType)
     {
         Texture newTex;
@@ -396,12 +419,12 @@ public:
             if (textures[i].type == Texture::TEXType::DIFF)
             {
                 number = std::to_string(diffuseNr++);
-                name = "material.texture_diffuse";
+                name = "meshTexture.texture_diffuse";
             }
             else if (textures[i].type == Texture::TEXType::SPEC)
             {
                 number = std::to_string(specularNr++);
-                name = "material.texture_specular";
+                name = "meshTexture.texture_specular";
             }
             // now set the sampler to the correct texture unit
             glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);

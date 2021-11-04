@@ -101,7 +101,7 @@ int main()
         "../images/skybox/back.jpg",
     };
     
-    Mesh ourRflc("../model/doll/doll.obj");
+    Mesh ourRflc("../model/sphere/sphere.obj");
     ourRflc.addCubeMap(faces, Texture::TEXType::RFLC);
 
     Mesh ourGround("../model/ground/ground.obj");
@@ -118,6 +118,9 @@ int main()
     modelShader.setVec3("light.ambient", 0.3f, 0.3f, 0.3f);
     modelShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
     modelShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+    modelShader.setFloat("light.constant", 1.0f);
+    modelShader.setFloat("light.linear", 0.09f);
+    modelShader.setFloat("light.quadratic", 0.032f);
 
     while (!glfwWindowShouldClose(window))
     {

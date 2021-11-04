@@ -7,7 +7,7 @@ in vec2 TexCoords;
 
 struct Material {
     sampler2D texture_diffuse1;
-    sampler2D texture_specular1; 
+    sampler2D texture_specular1;
     float shininess;
 }; 
 
@@ -31,7 +31,7 @@ struct PointLight {
     float linear;
     float quadratic;
 };
-#define NR_POINT_LIGHTS 4
+#define NR_POINT_LIGHTS 3
 
 uniform bool blinn;
 uniform vec3 viewPos;
