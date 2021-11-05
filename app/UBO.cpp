@@ -131,9 +131,9 @@ int main()
 
     unsigned int pointLightNums = pointLightPositions.size();
     multiShader.use();
-    multiShader.setFloat("material.shininess", 48.0f);
+    multiShader.setFloat("material.shininess", 32.0f);
     multiShader.setVec3("dirLight.direction", 0.0f, -1.0f, 0.0f);
-    multiShader.setVec3("dirLight.ambient", 0.3f, 0.3f, 0.3f);
+    multiShader.setVec3("dirLight.ambient", 0.1f, 0.1f, 0.1f);
     multiShader.setVec3("dirLight.diffuse", 0.3f, 0.3f, 0.3f);
     multiShader.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
     for (unsigned int i = 0; i < pointLightNums; ++i)
@@ -157,7 +157,7 @@ int main()
         processInput(window);
 
         // render clear
-        glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // be sure to activate shader when setting uniforms/drawing objects
@@ -185,6 +185,7 @@ int main()
         multiShader.use();
         multiShader.setMat4("model", model);
         ourCube.Draw(multiShader);
+
         lampShader.use();
         for (unsigned int i = 0; i < pointLightNums; ++i)
         {

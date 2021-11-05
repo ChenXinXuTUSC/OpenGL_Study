@@ -1,5 +1,5 @@
 #ifndef MYMESH_H
-#define MEMESH_H
+#define MYMESH_H
 /**
  * @file myMesh.h
  * @author your name (you@domain.com)
@@ -82,8 +82,6 @@ private:
         glm::vec3 ks; // 镜面光分量
         float ns; // 反射强度
     };
-    
-    mtl meshMaterial;
 
     unsigned int VBO;
     unsigned int EBO;
@@ -320,6 +318,7 @@ private:
 
 public: 
     vector<Vertex> vertices;
+
     // indices would not be used this time...
     vector<unsigned int> indices;
     vector<Texture> textures;
@@ -336,20 +335,19 @@ public:
 
         useEvrmTex = false;
         useRflcTex = false;
+
+        partName = "empty";
     }
     
     void setVertice(const vector<Vertex>& v)
     {
         vertices = v;
     }
-    void setMateria(glm::vec3 a, glm::vec3 d, glm::vec3 s, float n)
+    void setUpVertx()
     {
-        meshMaterial.ka = a;
-        meshMaterial.kd = d;
-        meshMaterial.ks = s;
-        meshMaterial.ns = n;
+        setupMesh();
     }
-
+    
     void addMapping(string texPath, Texture::TEXType texType)
     {
         Texture newTex;
@@ -380,6 +378,7 @@ public:
         newTex.id = loadCubeMap(faces);
         textures.push_back(newTex);
     }
+    
     void Draw(Shader& shader)
     {
         if (useEvrmTex)
@@ -419,12 +418,12 @@ public:
             if (textures[i].type == Texture::TEXType::DIFF)
             {
                 number = std::to_string(diffuseNr++);
-                name = "meshTexture.texture_diffuse";
+                name = "material.texture_diffuse";
             }
             else if (textures[i].type == Texture::TEXType::SPEC)
             {
                 number = std::to_string(specularNr++);
-                name = "meshTexture.texture_specular";
+                name = "material.texture_specular";
             }
             // now set the sampler to the correct texture unit
             glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
