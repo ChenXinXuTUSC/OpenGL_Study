@@ -33,8 +33,10 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-// lighting
-glm::vec3 lightPos(-1.8f, 4.0f, -3.0f);
+// lighting related variables
+glm::vec3 lightPos(1.8f, 1.0f, 3.0f);
+bool blinn = false;
+bool blinnKeyPressed = false;
 
 int main()
 {
@@ -79,48 +81,70 @@ int main()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
-    // build and compile our shader program
-    // ------------------------------------
-    // model shader
-    Shader modelShader("../source/shader/vmodel.glsl", "../source/shader/fmodel.glsl");
-    Shader reflectShader("../source/shader/vreflect.glsl", "../source/shader/freflect.glsl");
-    // world shader
-    Shader skyBoxShader("../source/shader/vskybox.glsl", "../source/shader/fskybox.glsl");
+    // build and compile our shader zprogram
+    /**----------------------------------------------------------------
+     * @brief 
+     * 4 point-lights is set in the shader, please do the corresponding
+     * changes in the render loop.
+     * ----------------------------------------------------------------
+     */
 
+    // shader settings
+    Shader multiShader("../source/shader/vubo.glsl", "../source/shader/fubo.glsl");
+    Shader lampShader("../source/shader/vlamp2.glsl", "../source/shader/flamp2.glsl");
+
+    unsigned int uniformBlockIndex_multiShader = glGetUniformBlockIndex(multiShader.ID, "Matrices");
+    unsigned int uniformBlockIndex_lampShader  = glGetUniformBlockIndex(lampShader.ID, "Matrices");
+
+    glUniformBlockBinding(multiShader.ID, uniformBlockIndex_multiShader, 0);
+    glUniformBlockBinding(lampShader.ID, uniformBlockIndex_lampShader, 0);
+
+    unsigned int UBO;
+    glGenBuffers(1, &UBO);
+
+    glBindBuffer(GL_UNIFORM_BUFFER, UBO);
+    glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO, 0, 2 * sizeof(glm::mat4));
+
+
+    // model import
     Mesh ourCube("../model/cube/cube.obj");
     ourCube.addMapping("../images/container2.png", Texture::TEXType::DIFF);
     ourCube.addMapping("../images/container2_specular.png", Texture::TEXType::SPEC);
 
-    std::vector<string> faces =
-    {
-        "../images/skybox/right.jpg",
-        "../images/skybox/left.jpg",
-        "../images/skybox/top.jpg",
-        "../images/skybox/bottom.jpg",
-        "../images/skybox/front.jpg",
-        "../images/skybox/back.jpg",
-    };
-    
-    Mesh ourRflc("../model/sphere/sphere.obj");
-    ourRflc.addCubeMap(faces, Texture::TEXType::RFLC);
+    Mesh ourLamp("../model/cube/cube.obj");
 
     Mesh ourGround("../model/ground/ground.obj");
-    ourGround.addMapping("../images/marble.png", Texture::TEXType::SPEC);
+    ourGround.addMapping("../images/wood.png", Texture::TEXType::SPEC);
 
-    Mesh ourSky("../model/skyBox/skyBox.obj");
-    ourSky.addCubeMap(faces, Texture::TEXType::EVRM);
-
-    // render loop
-    // -----------
     // shader settings
-    modelShader.use();
-    modelShader.setFloat("material.shininess", 32.0f);
-    modelShader.setVec3("light.ambient", 0.3f, 0.3f, 0.3f);
-    modelShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-    modelShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-    modelShader.setFloat("light.constant", 1.0f);
-    modelShader.setFloat("light.linear", 0.09f);
-    modelShader.setFloat("light.quadratic", 0.032f);
+    // positions of the point lights
+    std::vector<glm::vec3> pointLightPositions =
+    {
+        glm::vec3(3.0f, 1.0f, 3.0f),
+        glm::vec3(3.0f, 1.0f, -3.0f),
+        glm::vec3(-3.0f, 1.0f, 3.0f),
+        glm::vec3(-3.0f, 1.0f, -3.0f)
+    };
+
+    unsigned int pointLightNums = pointLightPositions.size();
+    multiShader.use();
+    multiShader.setFloat("material.shininess", 32.0f);
+    multiShader.setVec3("dirLight.direction", 0.0f, -1.0f, 0.0f);
+    multiShader.setVec3("dirLight.ambient", 0.1f, 0.1f, 0.1f);
+    multiShader.setVec3("dirLight.diffuse", 0.3f, 0.3f, 0.3f);
+    multiShader.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
+    for (unsigned int i = 0; i < pointLightNums; ++i)
+    {
+        multiShader.setVec3("pointLights[" + std::to_string(i) + "].ambient", 0.05f, 0.05f, 0.05f);
+        multiShader.setVec3("pointLights[" + std::to_string(i) + "].diffuse", 0.4f, 0.4f, 0.4f);
+        multiShader.setVec3("pointLights[" + std::to_string(i) + "].specular", 1.0f, 1.0f, 1.0f);
+        multiShader.setFloat("pointLights[" + std::to_string(i) + "].constant", 1.0f);
+        multiShader.setFloat("pointLights[" + std::to_string(i) + "].linear", 0.09f);
+        multiShader.setFloat("pointLights[" + std::to_string(i) + "].quadratic", 0.032f);
+    }
 
     while (!glfwWindowShouldClose(window))
     {
@@ -130,58 +154,54 @@ int main()
         lastFrame = currentFrame;
 
         // input
-        // -----
         processInput(window);
 
-        // render
-        // ------
-        glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
+        // render clear
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // be sure to activate shader when setting uniforms/drawing objects
-        // ----------modelShader----------
-        modelShader.use();
-        modelShader.setVec3("light.position", lightPos);
-        modelShader.setVec3("viewPos", camera.Position);
-        reflectShader.use();
-        reflectShader.setVec3("viewPos", camera.Position);
-
-        // view/projection transformations =========================================
+        // shader settings
+        // model/view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 model = glm::mat4(1.0f);
-        modelShader.use();
-        modelShader.setMat4("projection", projection);
-        modelShader.setMat4("view", view);
-        modelShader.setMat4("model", model);
+        glBindBuffer(GL_UNIFORM_BUFFER, UBO);
+        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projection));
+        glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(view));
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-        reflectShader.use();
-        reflectShader.setMat4("projection", projection);
-        reflectShader.setMat4("view", view);
-        reflectShader.setMat4("model", model);
+        multiShader.use();
+        // point lights' position settings
+        for (unsigned int i = 0; i < pointLightNums; ++i)
+        {
+            multiShader.setVec3("pointLights[" + std::to_string(i) + "].position", pointLightPositions[i]);
+        }
+        multiShader.setVec3("viewPos", camera.Position);
+        multiShader.setInt("blinn", blinn);
 
-        // draw all the models =====================================================
+        // draw all the models
         glEnable(GL_CULL_FACE);
-        modelShader.use();
-        ourCube.Draw(modelShader);
+        multiShader.use();
+        multiShader.setMat4("model", model);
+        ourCube.Draw(multiShader);
 
-        reflectShader.use();
-        model = glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 3.0f));
-        reflectShader.setMat4("model", model);
-        ourRflc.Draw(reflectShader);
+        lampShader.use();
+        for (unsigned int i = 0; i < pointLightNums; ++i)
+        {
+            model = glm::translate(glm::mat4(1.0f), pointLightPositions[i]);
+            model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
+            lampShader.setMat4("model", model);
+            lampShader.setVec3("LampColor", glm::vec3(1.0f, 1.0f, 1.0f));
+            ourLamp.Draw(lampShader);
+        }
 
-        // draw the ground and skybox ==============================================
         glDisable(GL_CULL_FACE);
-        modelShader.use();
+        multiShader.use();
         model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-        modelShader.setMat4("model", model);
-        ourGround.Draw(modelShader);
-
-        skyBoxShader.use();
-        view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
-        skyBoxShader.setMat4("view", view);
-        skyBoxShader.setMat4("projection", projection);
-        ourSky.Draw(skyBoxShader);
+        model = glm::scale(model, glm::vec3(2.5f, 1.0f, 2.5f));
+        multiShader.setMat4("model", model);
+        ourGround.Draw(multiShader);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -210,6 +230,13 @@ void processInput(GLFWwindow *window)
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed)
+    {
+        blinn = !blinn;
+        blinnKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE)
+        blinnKeyPressed = false;
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes

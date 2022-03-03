@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include <string>
+#include <random>
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
@@ -20,7 +21,7 @@ void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
 
 // settings
-const unsigned int SCR_WIDTH =600;
+const unsigned int SCR_WIDTH = 600;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
@@ -33,8 +34,10 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-// lighting
+// lighting related variables
 glm::vec3 lightPos(1.8f, 1.0f, 3.0f);
+bool blinn = false;
+bool blinnKeyPressed = false;
 
 int main()
 {
@@ -80,36 +83,105 @@ int main()
     glEnable(GL_CULL_FACE);
 
     // build and compile our shader zprogram
-    // ------------------------------------
-    Shader modelShader("../source/shader/vmodel.glsl", "../source/shader/fmodel.glsl");
-    Shader textureShader("../source/shader/vtexture.glsl", "../source/shader/ftexture.glsl");
+    /**----------------------------------------------------------------
+     * @brief 
+     * 4 point-lights is set in the shader, please do the corresponding
+     * changes in the render loop.
+     * ----------------------------------------------------------------
+     */
 
+    // shader settings
+    Shader multiShader("../source/shader/vubo.glsl", "../source/shader/fubo.glsl");
+    Shader lampShader("../source/shader/vlamp2.glsl", "../source/shader/flamp2.glsl");
+
+    unsigned int uniformBlockIndex_multiShader = glGetUniformBlockIndex(multiShader.ID, "Matrices");
+    unsigned int uniformBlockIndex_lampShader = glGetUniformBlockIndex(lampShader.ID, "Matrices");
+
+    glUniformBlockBinding(multiShader.ID, uniformBlockIndex_multiShader, 0);
+    glUniformBlockBinding(lampShader.ID, uniformBlockIndex_lampShader, 0);
+
+    unsigned int UBO;
+    glGenBuffers(1, &UBO);
+
+    glBindBuffer(GL_UNIFORM_BUFFER, UBO);
+    glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO, 0, 2 * sizeof(glm::mat4));
+
+    // model import
     Mesh ourCube("../model/cube/cube.obj");
     ourCube.addMapping("../images/container2.png", Texture::TEXType::DIFF);
     ourCube.addMapping("../images/container2_specular.png", Texture::TEXType::SPEC);
 
-    Mesh ourRing("../model/cube/cube.obj");
+    Mesh planet("../model/planet/planet.obj");
+    planet.addMapping("../model/planet/planet_Quom1200.png", Texture::TEXType::DIFF);
+    Mesh rock("../model/rock/rock.obj");
+    rock.addMapping("../model/rock/Rock-Texture-Surface.jpg", Texture::TEXType::DIFF);
+    // rock positions
+    std::srand(glfwGetTime());
 
-    Mesh ourGround("../model/ground/ground.obj");
-    ourGround.addMapping("../images/wood.png", Texture::TEXType::SPEC);
+    unsigned int amount = 1000;
+    std::vector<glm::mat4> modelMatrices(amount);
+    float radius = 50.0;
+    float offset = 2.5f;
+    for (unsigned int i = 0; i < amount; ++i)
+    {
+        /**
+         * @brief if you are using a relatively new version
+         * of GLM, remeber to initialize matrix with 1.0f!
+         * or every element of the matrix will be uncertain
+         */
+        glm::mat4 model(1.0f);
+        // translationg to a circle
+        float angle = (float)i / (float)amount * 360.0f;
+        float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float x = sin(angle) * radius + displacement;
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float y = displacement * 0.4f; // 让行星带的高度比x和z的宽度要小
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float z = cos(angle) * radius + displacement;
+        model = glm::translate(model, glm::vec3(x, y, z));
 
-    // render loop
-    // -----------
+        // 2. rotate: rotate with a random axis
+        float rotAngle = (rand() % 360);
+        model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
+
+        // 3. scale: scale between 0.01 and 0.25
+        float scale = (rand() % 25) / 100.0f + 0.1;
+        model = glm::scale(model, glm::vec3(scale));
+
+        // 4. add transformation to matrices
+        modelMatrices[i] = model;
+    }
+
+
     // shader settings
-    modelShader.use();
-    modelShader.setFloat("material.shininess", 1.0f);
-    modelShader.setVec3("light.ambient", 0.3f, 0.3f, 0.3f);
-    modelShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-    modelShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+    // positions of the point lights
+    std::vector<glm::vec3> pointLightPositions =
+    {
+        glm::vec3(10.0f, 1.0f, 10.0f),
+        glm::vec3(10.0f, 1.0f, -10.0f),
+        glm::vec3(-10.0f, 1.0f, 10.0f),
+        glm::vec3(-10.0f, 1.0f, -10.0f)
+    };
 
-    textureShader.use();
-    textureShader.setFloat("material.shininess", 1.0f);
-    textureShader.setVec3("material.ambient", 0.5f, 0.475f, 0.0f);
-    textureShader.setVec3("material.diffuse", 1.0f, 0.95f, 0.0f);
-    textureShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
-    textureShader.setVec3("light.ambient", 0.3f, 0.3f, 0.3f);
-    textureShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-    textureShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+    unsigned int pointLightNums = pointLightPositions.size();
+    multiShader.use();
+    multiShader.setFloat("material.shininess", 64.0f);
+    multiShader.setVec3("dirLight.direction", 0.0f, -1.0f, 0.0f);
+    multiShader.setVec3("dirLight.ambient", 0.1f, 0.1f, 0.1f);
+    multiShader.setVec3("dirLight.diffuse", 0.5f, 0.5f, 0.5f);
+    multiShader.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
+    for (unsigned int i = 0; i < pointLightNums; ++i)
+    {
+        multiShader.setVec3("pointLights[" + std::to_string(i) + "].ambient", 0.05f, 0.05f, 0.05f);
+        multiShader.setVec3("pointLights[" + std::to_string(i) + "].diffuse", 0.4f, 0.4f, 0.4f);
+        multiShader.setVec3("pointLights[" + std::to_string(i) + "].specular", 1.0f, 1.0f, 1.0f);
+        multiShader.setFloat("pointLights[" + std::to_string(i) + "].constant", 1.0f);
+        multiShader.setFloat("pointLights[" + std::to_string(i) + "].linear", 0.09f);
+        multiShader.setFloat("pointLights[" + std::to_string(i) + "].quadratic", 0.032f);
+    }
 
     while (!glfwWindowShouldClose(window))
     {
@@ -119,64 +191,50 @@ int main()
         lastFrame = currentFrame;
 
         // input
-        // -----
         processInput(window);
 
-        // render
-        // ------
-        glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
+        // render clear
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // be sure to activate shader when setting uniforms/drawing objects
-        // ----------modelShader----------
-        modelShader.use();
-        modelShader.setVec3("light.position", lightPos);
-        modelShader.setVec3("viewPos", camera.Position);
-
-        // ----------textureShader----------
-        textureShader.use();
-        textureShader.setVec3("light.position", lightPos);
-        textureShader.setVec3("viewPos", camera.Position);
-
-
-        // view/projection transformations
+        // shader settings
+        // model/view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
-        modelShader.use();
-        modelShader.setMat4("projection", projection);
-        modelShader.setMat4("view", view);
-        textureShader.use();
-        textureShader.setMat4("projection", projection);
-        textureShader.setMat4("view", view);
-
-        // world transformation
         glm::mat4 model = glm::mat4(1.0f);
-        modelShader.use();
-        modelShader.setMat4("model", model);
-        textureShader.use();
-        textureShader.setMat4("model", model);
+        glBindBuffer(GL_UNIFORM_BUFFER, UBO);
+        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projection));
+        glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(view));
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+        multiShader.use();
+        // point lights' position settings
+        for (unsigned int i = 0; i < pointLightNums; ++i)
+        {
+            multiShader.setVec3("pointLights[" + std::to_string(i) + "].position", pointLightPositions[i]);
+        }
+        multiShader.setVec3("viewPos", camera.Position);
+        multiShader.setInt("blinn", blinn);
 
         // draw all the models
         glEnable(GL_CULL_FACE);
-        // modelShader.use();
-        // ourCube.Draw(modelShader);
-        
-        textureShader.use();
-        ourRing.Draw(textureShader);
+        // draw all the models
+        multiShader.use();
+        // draw the planet
+        model = glm::scale(model, glm::vec3(5.0f, 5.0f, 5.0f));
+        multiShader.setMat4("model", model);
+        planet.Draw(multiShader);
+        // draw all rocks that surround with planet
+        for (unsigned int i = 0; i < amount; ++i)
+        {
+            multiShader.setMat4("model", modelMatrices[i]);
+            rock.Draw(multiShader);
+        }
 
-        glDisable(GL_CULL_FACE);
-        modelShader.use();
-        model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(5.0f, 1.0f, 5.0f));
-        modelShader.setMat4("model", model);
-        ourGround.Draw(modelShader);
-
-
-
-        // draw a second one
-        // model = glm::translate(model, glm::vec3(3.0f, 0.0f, 3.0f));
-        // modelShader.setMat4("model", model);
-
+        model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
+        multiShader.setMat4("model", model);
+        ourCube.Draw(multiShader);
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
@@ -204,6 +262,13 @@ void processInput(GLFWwindow *window)
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed)
+    {
+        blinn = !blinn;
+        blinnKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE)
+        blinnKeyPressed = false;
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
