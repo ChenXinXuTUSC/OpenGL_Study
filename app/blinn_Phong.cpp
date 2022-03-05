@@ -83,8 +83,8 @@ int main()
 
     // build and compile our shader zprogram
     // ------------------------------------
-    Shader blinnShader("../source/shader/vmodel.glsl", "../source/shader/fblinn.glsl");
-    Shader textureShader("../source/shader/vtexture.glsl", "../source/shader/ftexture.glsl");
+    Shader blinnShader("../shader/shader_vertex/vmodel.glsl", "../shader/shader_fragment/fblinn.glsl");
+    Shader textureShader("../shader/shader_vertex/vtexture.glsl", "../shader/shader_fragment/ftexture.glsl");
 
     Mesh ourCube("../model/cube/cube.obj");
     ourCube.addMapping("../images/container2.png", Texture::TEXType::DIFF);
