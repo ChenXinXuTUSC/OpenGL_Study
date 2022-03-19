@@ -53,7 +53,7 @@ int main()
 
     // build and compile our shader zprogram
     // ------------------------------------
-    Shader ourShader("../source/shader/vshader.glsl", "../source/shader/fshader.glsl");
+    Shader ourShader("../shader/shader_vertex/vblend.glsl", "../shader/shader_fragment/fblend.glsl");
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------

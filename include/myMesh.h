@@ -297,8 +297,8 @@ private:
         // concatenate vertices
         for (auto &fce : fces)
         {
-            //!Attention: the sequence you insert the vertices must
-            //!correspond to the attribPointers you set.
+            //! Attention: the sequence you insert the vertices must
+            //! correspond to the attribPointers you set.
             // insert position coords
             Vertex temp_vtx;
             temp_vtx.Position.x = vtxs[fce.vtx_idx].x;
