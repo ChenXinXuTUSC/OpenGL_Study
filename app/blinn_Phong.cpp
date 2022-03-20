@@ -90,8 +90,6 @@ int main()
     ourCube.addMapping("../images/container2.png", Texture::TEXType::DIFF);
     ourCube.addMapping("../images/container2_specular.png", Texture::TEXType::SPEC);
 
-    Mesh ourRing("../model/cube/cube.obj");
-
     Mesh ourGround("../model/ground/ground.obj");
     ourGround.addMapping("../images/wood.png", Texture::TEXType::SPEC);
 
@@ -169,8 +167,8 @@ int main()
         // blinnShader.use();
         // ourCube.Draw(blinnShader);
 
-        textureShader.use();
-        ourRing.Draw(textureShader);
+        blinnShader.use();
+        ourCube.Draw(textureShader);
 
         glDisable(GL_CULL_FACE);
         blinnShader.use();

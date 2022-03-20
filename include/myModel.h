@@ -102,9 +102,9 @@ private:
 
         ifstream inFile(path.c_str());
         if (inFile.is_open())
-            cout << "obj file has been found.\n";
+            cout << "processing " << objName << ".obj\n";
         else
-            cout << "ERROR::OPENNING::FILE\n";
+            cout << "class 'Model': loadObjFile: ERROR::OPENNING::FILE\n";
 
         string line;
         string prtName;
@@ -116,30 +116,14 @@ private:
         // load all vertices data
         while (getline(inFile, line))
         {
-            if (line.substr(0, 1) == "o")
-            {
-                // remember to set up VAO of the last part!
-                meshes[prtName].setUpVertx();
-
-                // construct a new part of object
-                std::istringstream s(line.substr(1));
-                s >> prtName;
-                meshes[prtName] = Mesh(prtName, true);
-                cout << "Loading part [" << prtName << "]\t of the obj file\n";
-
-                // vtxs.clear();
-                // texs.clear();
-                // nrms.clear();
-                // fces.clear();
-            }
-            else if (line.substr(0, 2) == "vt")
-            {
-                // resolve texture coordinates
-                std::istringstream s(line.substr(2));
-                s >> x;
-                s >> y;
-                texs.push_back(tex(x, y));
-            }
+            if (line.substr(0, 2) == "vt")
+                {
+                    // resolve texture coordinates
+                    std::istringstream s(line.substr(2));
+                    s >> x;
+                    s >> y;
+                    texs.push_back(tex(x, y));
+                }
             else if (line.substr(0, 2) == "vn")
             {
                 // resolve normal coordinates
@@ -157,6 +141,74 @@ private:
                 s >> y;
                 s >> z;
                 vtxs.push_back(vtx(x, y, z));
+            }
+            else if (line.substr(0, 6) == "mtllib")
+            {
+                // different from loadObj(), we use substr(7) here
+                // instead of cut a length of 6, because the rest
+                // of the string will not be transformed into istring
+                // stream to input another string, it is directly 
+                // used as a string
+                line = line.substr(7);
+                // get file name component
+                int p = line.length() - 1;
+                while (p >= 0 && line[p] != '/') p--;
+                line = line.substr(p + 1);
+                string mtlPath = dirPath + '/' + line;
+                loadMtlFile(mtlPath);
+            }
+            
+            else
+            {
+            }
+        }
+        // load all parts of the obj
+        inFile.clear();
+        inFile.seekg(0);
+        bool first_prt = true;
+        while (getline(inFile, line))
+        {
+            if (line.substr(0, 1) == "o" && first_prt)
+            {
+                // construct a new part of object
+                std::istringstream s(line.substr(1));
+                s >> prtName;
+                meshes[prtName] = Mesh();
+                meshes[prtName].partName = prtName;
+                first_prt = false;
+            }
+            else if (line.substr(0, 1) == "o" && !first_prt)
+            {
+                cout << "Loading part [" << prtName << "] of the "<< objName << ".obj\n";
+                // concatenate vertices
+                for (auto &fce : fces)
+                {
+                    //! Attention: the sequence you insert the vertices must
+                    //! correspond to the attribPointers you set.
+                    // insert position coords
+                    Vertex temp_vtx;
+                    temp_vtx.Position.x = vtxs[fce.vtx_idx].x;
+                    temp_vtx.Position.y = vtxs[fce.vtx_idx].y;
+                    temp_vtx.Position.z = vtxs[fce.vtx_idx].z;
+                    // insert normal coords
+                    temp_vtx.Normal.x = nrms[fce.nrm_idx].x;
+                    temp_vtx.Normal.y = nrms[fce.nrm_idx].y;
+                    temp_vtx.Normal.z = nrms[fce.nrm_idx].z;
+                    // insert texture coords
+                    temp_vtx.TexCoords.x = texs[fce.tex_idx].x;
+                    temp_vtx.TexCoords.y = texs[fce.tex_idx].y;
+
+                    meshes[prtName].vertices.push_back(temp_vtx);
+                }
+                // remember to set up VAO of the last part!
+                meshes[prtName].setUpVertx();
+                fces.clear();
+
+                // construct a new part of object
+                std::istringstream s(line.substr(1));
+                s >> prtName;
+                meshes[prtName] = Mesh();
+                meshes[prtName].partName = prtName;
             }
             else if (line.substr(0, 1) == "f")
             {
@@ -190,27 +242,6 @@ private:
                     temp_i = stringSplit(s4, '/');
                     fces.push_back(fce(stoi(temp_i[0]) - 1, stoi(temp_i[1]) - 1, stoi(temp_i[2]) - 1));
                 }
-
-                // concatenate vertices
-                for (auto &fce : fces)
-                {
-                    //!Attention: the sequence you insert the vertices must
-                    //!correspond to the attribPointers you set.
-                    // insert position coords
-                    Vertex temp_vtx;
-                    temp_vtx.Position.x = vtxs[fce.vtx_idx].x;
-                    temp_vtx.Position.y = vtxs[fce.vtx_idx].y;
-                    temp_vtx.Position.z = vtxs[fce.vtx_idx].z;
-                    // insert normal coords
-                    temp_vtx.Normal.x = nrms[fce.nrm_idx].x;
-                    temp_vtx.Normal.y = nrms[fce.nrm_idx].y;
-                    temp_vtx.Normal.z = nrms[fce.nrm_idx].z;
-                    // insert texture coords
-                    temp_vtx.TexCoords.x = texs[fce.tex_idx].x;
-                    temp_vtx.TexCoords.y = texs[fce.tex_idx].y;
-
-                    meshes[prtName].vertices.push_back(temp_vtx);
-                }
             }
             else if (line.substr(0, 6) == "usemtl")
             {
@@ -220,29 +251,53 @@ private:
                     materials[mtlName].ka,
                     materials[mtlName].kd,
                     materials[mtlName].ks,
-                    materials[mtlName].ns
-                );
+                    materials[mtlName].ns);
                 if (materials[mtlName].kd_map != "empty")
                     meshes[prtName].addMapping(materials[mtlName].kd_map, Texture::TEXType::DIFF);
                 if (materials[mtlName].ks_map != "empty")
                     meshes[prtName].addMapping(materials[mtlName].ks_map, Texture::TEXType::SPEC);
             }
-            else
-            {
-            }
         }
-        vtxs.clear();
-        texs.clear();
-        nrms.clear();
-        fces.clear();
+        // remember to load the last part
+        if (fces.size())
+        {
+            cout << "Loading part [" << prtName << "] of the " << objName << ".obj\n";
+            // concatenate vertices
+            for (auto &fce : fces)
+            {
+                //! Attention: the sequence you insert the vertices must
+                //! correspond to the attribPointers you set.
+                // insert position coords
+                Vertex temp_vtx;
+                temp_vtx.Position.x = vtxs[fce.vtx_idx].x;
+                temp_vtx.Position.y = vtxs[fce.vtx_idx].y;
+                temp_vtx.Position.z = vtxs[fce.vtx_idx].z;
+                // insert normal coords
+                temp_vtx.Normal.x = nrms[fce.nrm_idx].x;
+                temp_vtx.Normal.y = nrms[fce.nrm_idx].y;
+                temp_vtx.Normal.z = nrms[fce.nrm_idx].z;
+                // insert texture coords
+                temp_vtx.TexCoords.x = texs[fce.tex_idx].x;
+                temp_vtx.TexCoords.y = texs[fce.tex_idx].y;
+
+                meshes[prtName].vertices.push_back(temp_vtx);
+            }
+            // remember to set up VAO of the last part!
+            meshes[prtName].setUpVertx();
+            fces.clear();
+        }
+        cout << "finish loading " << objName << endl;
     }
     void loadMtlFile(const string& path)
     {
         ifstream inFile(path.c_str());
         if (inFile.is_open())
-            cout << "mtl file has been found.\n";
+            cout << objName << ".mtl file has been found.\n";
         else
-            cout << "ERROR::OPENNING::FILE\n";
+        {
+            cout << "class 'Model': loadMtlFile: ERROR::OPENNING::FILE\n";
+            exit(-1);
+        }
 
         string line;
         string mtlName;
@@ -309,8 +364,6 @@ public:
         dirPath = dP;
         objName = oN;
 
-        loadMtlFile(dirPath + '/' + objName + ".mtl");
-        // printMtl();
         loadObjFile(dirPath + '/' + objName + ".obj");
         // printObj();
     }
@@ -325,11 +378,14 @@ public:
     // some utilities
     void printObj()
     {
-        cout << "this obj file contains " << meshes.size() << " parts\n";
-        for (map<string, Mesh>::reverse_iterator iter = meshes.rbegin(); iter != meshes.rend(); ++iter)
+        cout << objName << ".obj contains " << meshes.size() << " parts\n";
+        for (map<string, Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); ++iter)
         {
-            cout << iter->second.partName << " has vertices: ";
-            cout << iter->second.vertices.size() << endl;
+            cout << '<' << iter->second.partName << '>' << endl;
+            cout << "vertices: " << iter->second.vertices.size() << endl;
+            cout << "textures:\n" ;
+            for (auto tex = iter->second.textures.begin(); tex != iter->second.textures.end(); ++tex)
+                cout << tex->path << endl;
         }
     }
     void printMtl()

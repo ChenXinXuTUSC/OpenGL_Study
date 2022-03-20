@@ -9,6 +9,7 @@
 #include <shader.h>
 #include <camera.h>
 #include <myMesh.h>
+#include <myModel.h>
 
 #include <iostream>
 #include <string>
@@ -91,8 +92,8 @@ int main()
      */
 
     // shader settings
-    Shader multiShader("../source/shader/vubo.glsl", "../source/shader/fubo.glsl");
-    Shader lampShader("../source/shader/vlamp2.glsl", "../source/shader/flamp2.glsl");
+    Shader multiShader("../shader/shader_vertex/vubo.glsl", "../shader/shader_fragment/fubo.glsl");
+    Shader lampShader("../shader/shader_vertex/vlamp2.glsl", "../shader/shader_fragment/flamp2.glsl");
 
     unsigned int uniformBlockIndex_multiShader = glGetUniformBlockIndex(multiShader.ID, "Matrices");
     unsigned int uniformBlockIndex_lampShader = glGetUniformBlockIndex(lampShader.ID, "Matrices");
@@ -110,6 +111,7 @@ int main()
     glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO, 0, 2 * sizeof(glm::mat4));
 
     // model import
+    Model testDoll("../model/nanosuit", "nanosuit");
     Mesh ourCube("../model/cube/cube.obj");
     ourCube.addMapping("../images/container2.png", Texture::TEXType::DIFF);
     ourCube.addMapping("../images/container2_specular.png", Texture::TEXType::SPEC);
@@ -219,12 +221,17 @@ int main()
 
         // draw all the models
         glEnable(GL_CULL_FACE);
-        // draw all the models
+
+        // draw the doll
         multiShader.use();
-        // draw the planet
-        model = glm::scale(model, glm::vec3(5.0f, 5.0f, 5.0f));
         multiShader.setMat4("model", model);
-        planet.Draw(multiShader);
+        testDoll.Draw(multiShader);
+
+        // draw the planet
+        // model = glm::scale(model, glm::vec3(5.0f, 5.0f, 5.0f));
+        // multiShader.setMat4("model", model);
+        // planet.Draw(multiShader);
+
         // draw all rocks that surround with planet
         for (unsigned int i = 0; i < amount; ++i)
         {
@@ -232,9 +239,6 @@ int main()
             rock.Draw(multiShader);
         }
 
-        model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
-        multiShader.setMat4("model", model);
-        ourCube.Draw(multiShader);
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);

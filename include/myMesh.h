@@ -81,8 +81,15 @@ private:
         glm::vec3 kd; // 漫反射分量
         glm::vec3 ks; // 镜面光分量
         float ns; // 反射强度
+        mtl()
+        {
+            ns = 0.0f;
+            ka.x = ka.y = ka.z = 0.0f;
+            kd.x = kd.y = kd.z = 0.0f;
+            ks.x = ks.y = ks.z = 0.0f;
+        }
     };
-
+    mtl thisMaterial;
     unsigned int VBO;
     unsigned int EBO;
 
@@ -328,6 +335,13 @@ public:
     string partName;
 
     // constructor
+    Mesh()
+    {
+        useEvrmTex = false;
+        useRflcTex = false;
+
+        partName = "empty";
+    }
     Mesh(const string& path)
     {
         loadObjFile(path);
@@ -346,6 +360,14 @@ public:
     void setUpVertx()
     {
         setupMesh();
+    }
+    
+    void setMateria(glm::vec3 a, glm::vec3 d, glm::vec3 s, float ns)
+    {
+        thisMaterial.ka = a;
+        thisMaterial.kd = d;
+        thisMaterial.ks = s;
+        thisMaterial.ns = ns;
     }
     
     void addMapping(string texPath, Texture::TEXType texType)
